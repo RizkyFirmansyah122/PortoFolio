@@ -26,7 +26,8 @@ import {
   Languages,
   BookCheck,
   Github,
-  Linkedin
+  Linkedin,
+  Download
 } from 'lucide-react';
 
 // ==========================================
@@ -351,15 +352,31 @@ export default function App() {
 
               <button
                 onClick={() => setIsCvOpen(true)}
-                className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                title="Preview Resume"
+                className={`hidden sm:flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                  isDark
+                    ? 'bg-[#121215] border-[#222226] text-zinc-400 hover:text-zinc-100'
+                    : 'bg-white border-zinc-200 text-zinc-600 hover:text-zinc-900'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5 stroke-[1.5]" />
+                <span>Preview</span>
+              </button>
+
+              <a
+                href="/Rizky_Firmansyah_CV.pdf"
+                download="Rizky_Firmansyah_CV.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-lg text-xs font-medium border transition-colors shadow-xs ${
                   isDark
                     ? 'bg-zinc-100 text-zinc-900 border-zinc-100 hover:bg-white'
                     : 'bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-800'
                 }`}
               >
-                <FileText className="w-3.5 h-3.5 stroke-[1.5]" />
+                <Download className="w-3.5 h-3.5 stroke-[2]" />
                 <span>Resume / CV</span>
-              </button>
+              </a>
             </div>
           </div>
         </div>
@@ -441,6 +458,22 @@ export default function App() {
               <span>View Selected Work</span>
               <ChevronRight className="w-4 h-4 stroke-[2]" />
             </button>
+
+            {/* Direct Download CV Action */}
+            <a
+              href="/Rizky_Firmansyah_CV.pdf"
+              download="Rizky_Firmansyah_CV.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`px-4 py-2.5 rounded-lg border text-sm font-medium flex items-center space-x-2 transition-colors ${
+                isDark
+                  ? 'bg-[#121215] border-emerald-500/40 text-emerald-400 hover:border-emerald-500/70 hover:bg-emerald-500/5'
+                  : 'bg-white border-emerald-500/40 text-emerald-700 hover:border-emerald-500/70 hover:bg-emerald-50'
+              }`}
+            >
+              <Download className="w-4 h-4 stroke-[2]" />
+              <span>Download CV</span>
+            </a>
 
             {/* Email Direct Action */}
             <a
@@ -1324,6 +1357,22 @@ export default function App() {
                 <ArrowUpRight className="w-3.5 h-3.5 stroke-[1.5]" />
               </a>
 
+              {/* Download CV Button */}
+              <a
+                href="/Rizky_Firmansyah_CV.pdf"
+                download="Rizky_Firmansyah_CV.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center space-x-1.5 transition-colors ${
+                  isDark
+                    ? 'bg-[#121215] border-[#222226] text-zinc-300 hover:text-white hover:border-zinc-700'
+                    : 'bg-white border-zinc-200 text-zinc-700 hover:text-black hover:border-zinc-300'
+                }`}
+              >
+                <Download className="w-3.5 h-3.5 stroke-[1.5]" />
+                <span>Download CV</span>
+              </a>
+
               {/* Copy Email Button */}
               <button
                 onClick={copyEmail}
@@ -1378,12 +1427,26 @@ export default function App() {
                 </div>
               </div>
               <div className="flex items-center space-x-2">
+                <a
+                  href="/Rizky_Firmansyah_CV.pdf"
+                  download="Rizky_Firmansyah_CV.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-medium text-xs flex items-center space-x-1.5 transition-colors shadow-xs"
+                >
+                  <Download className="w-3.5 h-3.5 stroke-[2]" />
+                  <span>Download PDF</span>
+                </a>
                 <button
                   onClick={() => window.print()}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-500 text-zinc-950 font-medium text-xs flex items-center space-x-1.5"
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center space-x-1.5 transition-colors ${
+                    isDark
+                      ? 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white'
+                      : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:text-black'
+                  }`}
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  <span>Print PDF</span>
+                  <span>Print</span>
                 </button>
                 <button
                   onClick={() => setIsCvOpen(false)}
