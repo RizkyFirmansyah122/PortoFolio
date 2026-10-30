@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   ArrowUpRight,
   Copy,
@@ -29,11 +29,11 @@ import {
   Linkedin,
   Download
 } from 'lucide-react';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 
 // ==========================================
-// STREAMLINED DATA
+// VIUME CELLS DATA
 // ==========================================
-
 const VIUME_CELLS = [
   {
     id: 'c1',
@@ -56,7 +56,7 @@ const VIUME_CELLS = [
     w: 14,
     h: 18,
     r: 4,
-    showInBaseline: false // Missed by standard YOLO without CBAM
+    showInBaseline: false
   },
   {
     id: 'c3',
@@ -79,7 +79,7 @@ const VIUME_CELLS = [
     w: 15,
     h: 19,
     r: 4.5,
-    showInBaseline: false // Missed by standard YOLO
+    showInBaseline: false
   }
 ];
 
@@ -118,14 +118,11 @@ const EXPERIENCE = [
     isHighlight: true,
     points: [
       'Architected and pitched a functional AI cervical cell screening platform during an intensive 16-hour international hackathon.',
-      'Collaborated across a diverse cross-cultural team of undergraduate (S1) and master’s (S2) students to deliver an award-winning prototype.'
+      'Collaborated across a diverse cross-cultural team of undergraduate (S1) and master\'s (S2) students to deliver an award-winning prototype.'
     ]
   }
 ];
 
-// ==========================================
-// 1. VERIFIED CREDENTIALS DATA
-// ==========================================
 const CREDENTIALS = [
   {
     id: 'aws-ai',
@@ -209,9 +206,6 @@ const CREDENTIALS = [
   }
 ];
 
-// ==========================================
-// 2. TECHNICAL STACK (3-COLUMN CLEAN GRID)
-// ==========================================
 const TECH_STACK = [
   {
     category: 'AI & Computer Vision',
@@ -262,10 +256,209 @@ const TECH_STACK = [
   }
 ];
 
+// ==========================================
+// ANIMATION CONFIGURATION
+// ==========================================
+const SPRING_CONFIG = {
+  default: { type: 'spring', stiffness: 260, damping: 25 },
+  gentle: { type: 'spring', stiffness: 100, damping: 30 },
+  snappy: { type: 'spring', stiffness: 380, damping: 40 }
+};
+
+const CONTAINER_VARIANTS = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.07,
+      delayChildren: 0.1
+    }
+  }
+};
+
+const ITEM_VARIANTS = {
+  hidden: { y: 12, opacity: 0 },
+  show: {
+    y: 0,
+    opacity: 1,
+    transition: { ...SPRING_CONFIG.default, duration: 0.5 }
+  }
+};
+
+const SCROLL_REVEAL_VARIANTS = {
+  hidden: { y: 24, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: { ...SPRING_CONFIG.default, duration: 0.6 }
+  }
+};
+
+// ==========================================
+// COUNTER ANIMATION COMPONENT
+// ==========================================
+function AnimatedCounter({ end, duration = 1 }) {
+  const [count, setCount] = React.useState(0);
+  
+  React.useEffect(() => {
+    let start = 0;
+    const increment = (end / (duration * 1000)) * 16;
+    
+    const timer = setInterval(() => {
+      start += increment;
+      if (start >= end) {
+        setCount(end);
+        clearInterval(timer);
+      } else {
+        setCount(Math.floor(start));
+      }
+    }, 16);
+    
+    return () => clearInterval(timer);
+  }, [end, duration]);
+  
+  return <>{Math.min(count, end)}</>;
+}
+
+// ==========================================
+// LASER SCANLINE COMPONENT (ViuMe Animation)
+// ==========================================
+function LaserScanline() {
+  return (
+    <motion.div
+      className="absolute inset-0 pointer-events-none"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: [0, 0.8, 0] }}
+      transition={{
+        repeat: 2,
+        duration: 1.2,
+        ease: 'easeInOut',
+        delay: 0.3
+      }}
+    >
+      <div
+        className="w-full h-1 bg-gradient-to-b from-transparent via-emerald-500 to-transparent"
+        style={{
+          animation: 'scanline 1.2s ease-in-out'
+        }}
+      />
+      <style>{`
+        @keyframes scanline {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(100%); }
+        }
+      `}</style>
+    </motion.div>
+  );
+}
+
+// ==========================================
+// SPOTLIGHT CARD WRAPPER (Mouse-Tracking Spotlight)
+// ==========================================
+function SpotlightCard({ children, isDark, className = '' }) {
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isHovering, setIsHovering] = useState(false);
+  const cardRef = useRef(null);
+
+  const handleMouseMove = (e) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    setMousePos({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+      className={`relative ${className}`}
+      style={{
+        background: isHovering
+          ? `radial-gradient(circle 180px at ${mousePos.x}px ${mousePos.y}px, 
+              ${isDark ? 'rgba(16, 185, 129, 0.08)' : 'rgba(16, 185, 129, 0.04)'}, 
+              transparent)`
+          : 'transparent'
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ==========================================
+// ANIMATED ARCHITECTURE PIPELINE
+// ==========================================
+function ArchitecturePipeline({ isDark, stages }) {
+  return (
+    <div className="flex items-center justify-between gap-2 mb-6 overflow-x-auto pb-2">
+      {stages.map((stage, idx) => (
+        <React.Fragment key={idx}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ delay: idx * 0.1 }}
+            className={`px-3 py-1.5 rounded-md font-mono-code text-xs whitespace-nowrap border flex items-center gap-1.5 ${
+              isDark
+                ? 'bg-zinc-900/70 border-emerald-500/30 text-emerald-400'
+                : 'bg-emerald-50 border-emerald-300 text-emerald-700'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            {stage}
+          </motion.div>
+          {idx < stages.length - 1 && (
+            <motion.div
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              transition={{ delay: idx * 0.1 + 0.05 }}
+              className="w-6 h-px bg-gradient-to-r from-emerald-500/30 to-transparent"
+              style={{ originX: 0 }}
+            />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+// ==========================================
+// VIEWFINDER CORNER BRACKETS (Computer Vision HUD)
+// ==========================================
+function ViewfinderCornerBrackets() {
+  const BracketCorner = ({ position }) => (
+    <div className={`absolute w-4 h-4 pointer-events-none ${position}`}>
+      <svg viewBox="0 0 16 16" className="w-full h-full stroke-emerald-500 fill-none">
+        <path d={
+          position.includes('top-left')
+            ? 'M8 0 L0 0 L0 8'
+            : position.includes('top-right')
+            ? 'M8 0 L16 0 L16 8'
+            : position.includes('bottom-left')
+            ? 'M0 8 L0 16 L8 16'
+            : 'M16 8 L16 16 L8 16'
+        } strokeWidth="1" vectorEffect="non-scaling-stroke" />
+      </svg>
+    </div>
+  );
+
+  return (
+    <>
+      <BracketCorner position="absolute top-left -top-2 -left-2" />
+      <BracketCorner position="absolute top-right -top-2 -right-2" />
+      <BracketCorner position="absolute bottom-left -bottom-2 -left-2" />
+      <BracketCorner position="absolute bottom-right -bottom-2 -right-2" />
+    </>
+  );
+}
+
 export default function App() {
   const [theme, setTheme] = useState('dark');
-  const [activeProjectTab, setActiveProjectTab] = useState('viume'); // 'viume' | 'receipt'
-  const [viumeStage, setViumeStage] = useState('ours'); // 'raw' | 'baseline' | 'ours'
+  const [activeProjectTab, setActiveProjectTab] = useState('viume');
+  const [viumeStage, setViumeStage] = useState('ours');
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [isCvOpen, setIsCvOpen] = useState(false);
 
@@ -289,13 +482,40 @@ export default function App() {
       }`}
       style={{
         fontFamily:
-          '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+          '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        backgroundImage: isDark
+          ? `radial-gradient(1.5px 1.5px at 24px 24px, rgba(255,255,255,0.05), transparent), radial-gradient(1.5px 1.5px at 24px 24px, rgba(255,255,255,0.05), transparent)`
+          : `radial-gradient(1.5px 1.5px at 24px 24px, rgba(0,0,0,0.03), transparent), radial-gradient(1.5px 1.5px at 24px 24px, rgba(0,0,0,0.03), transparent)`,
+        backgroundSize: '24px 24px',
+        backgroundPosition: '0 0, 12px 12px',
       }}
     >
+      {/* Ambient Spotlights for depth */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className={`absolute top-20 right-1/4 w-96 h-96 rounded-full blur-[120px] opacity-30 ${
+          isDark ? 'bg-emerald-500/5' : 'bg-emerald-400/[0.03]'
+        }`} />
+        <div className={`absolute bottom-40 left-1/3 w-80 h-80 rounded-full blur-[100px] opacity-25 ${
+          isDark ? 'bg-emerald-500/4' : 'bg-emerald-400/[0.02]'
+        }`} />
+      </div>
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
         .font-mono-code {
           font-family: 'JetBrains Mono', monospace;
+        }
+        
+        /* Top specular highlight for cards */
+        .card-specular::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 1px;
+          background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);
+          pointer-events: none;
         }
       `}</style>
 
@@ -310,12 +530,14 @@ export default function App() {
         }`}
       >
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-          <button
+          <motion.button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            whileHover={{ opacity: 0.8 }}
+            transition={SPRING_CONFIG.gentle}
             className="font-mono-code text-sm font-semibold tracking-tight hover:opacity-80 transition-opacity"
           >
             RFS<span className="text-emerald-500">.</span>
-          </button>
+          </motion.button>
 
           <div className="flex items-center space-x-1 sm:space-x-6">
             <nav className="hidden sm:flex items-center space-x-6 text-sm">
@@ -325,21 +547,26 @@ export default function App() {
                 { label: 'Credentials', id: 'credentials' },
                 { label: 'Stack', id: 'stack' }
               ].map((link) => (
-                <button
+                <motion.button
                   key={link.id}
                   onClick={() => scrollTo(link.id)}
+                  whileHover={{ color: isDark ? '#ffffff' : '#000000' }}
+                  transition={SPRING_CONFIG.gentle}
                   className={`transition-colors font-medium ${
                     isDark ? 'text-zinc-400 hover:text-zinc-100' : 'text-zinc-600 hover:text-zinc-900'
                   }`}
                 >
                   {link.label}
-                </button>
+                </motion.button>
               ))}
             </nav>
 
             <div className="flex items-center space-x-2.5 pl-2">
-              <button
+              <motion.button
                 onClick={() => setTheme(isDark ? 'light' : 'dark')}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                transition={SPRING_CONFIG.gentle}
                 aria-label="Toggle theme"
                 className={`p-2 rounded-lg border transition-colors ${
                   isDark
@@ -348,10 +575,13 @@ export default function App() {
                 }`}
               >
                 {isDark ? <Sun className="w-4 h-4 stroke-[1.5]" /> : <Moon className="w-4 h-4 stroke-[1.5]" />}
-              </button>
+              </motion.button>
 
-              <button
+              <motion.button
                 onClick={() => setIsCvOpen(true)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                transition={SPRING_CONFIG.gentle}
                 title="Preview Resume"
                 className={`hidden sm:flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
                   isDark
@@ -361,13 +591,16 @@ export default function App() {
               >
                 <FileText className="w-3.5 h-3.5 stroke-[1.5]" />
                 <span>Preview</span>
-              </button>
+              </motion.button>
 
-              <a
+              <motion.a
                 href="/Rizky_Firmansyah_CV.pdf"
                 download="Rizky_Firmansyah_CV.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                transition={SPRING_CONFIG.gentle}
                 className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-lg text-xs font-medium border transition-colors shadow-xs ${
                   isDark
                     ? 'bg-zinc-100 text-zinc-900 border-zinc-100 hover:bg-white'
@@ -376,7 +609,7 @@ export default function App() {
               >
                 <Download className="w-3.5 h-3.5 stroke-[2]" />
                 <span>Resume / CV</span>
-              </a>
+              </motion.a>
             </div>
           </div>
         </div>
@@ -388,21 +621,33 @@ export default function App() {
       <main className="max-w-4xl mx-auto px-6">
         
         {/* ==========================================
-            1. HERO SECTION
+            1. HERO SECTION WITH STAGGERED REVEAL
         ========================================== */}
-        <section className="py-16 sm:py-24 border-b border-zinc-800/40">
+        <motion.section 
+          className="py-16 sm:py-24 border-b border-zinc-800/40"
+          variants={CONTAINER_VARIANTS}
+          initial="hidden"
+          animate="show"
+        >
           {/* Status Pill */}
-          <div className="inline-flex items-center space-x-2.5 px-3 py-1 rounded-full border text-xs mb-8 bg-emerald-500/5 border-emerald-500/20 text-emerald-400">
+          <motion.div 
+            variants={ITEM_VARIANTS}
+            className="inline-flex items-center space-x-2.5 px-3 py-1 rounded-full border text-xs mb-8 bg-emerald-500/5 border-emerald-500/20 text-emerald-400"
+          >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>Available for AI / ML Engineering Roles</span>
-          </div>
+          </motion.div>
 
           {/* Main Name & Role */}
-          <h1 className="text-3xl sm:text-5xl font-bold tracking-tight mb-5">
+          <motion.h1 
+            variants={ITEM_VARIANTS}
+            className="text-3xl sm:text-5xl font-bold tracking-tight mb-5"
+          >
             Rizky Firmansyah Sipahutar
-          </h1>
+          </motion.h1>
 
-          <p
+          <motion.p
+            variants={ITEM_VARIANTS}
             className={`text-lg sm:text-xl leading-relaxed max-w-2xl mb-6 font-normal ${
               isDark ? 'text-zinc-300' : 'text-zinc-700'
             }`}
@@ -411,9 +656,10 @@ export default function App() {
               AI & Computer Vision Engineer
             </span>{' '}
             building production-ready deep learning systems—from high-sensitivity clinical pathology screening to multimodal document intelligence.
-          </p>
+          </motion.p>
 
-          <p
+          <motion.p
+            variants={ITEM_VARIANTS}
             className={`text-sm sm:text-base leading-relaxed max-w-2xl mb-8 ${
               isDark ? 'text-zinc-400' : 'text-zinc-600'
             }`}
@@ -427,17 +673,22 @@ export default function App() {
               Vision-Language Models
             </span>{' '}
             from research validation into reliable web applications using Python, SQL, and modern cloud pipelines.
-          </p>
+          </motion.p>
 
           {/* 3 Clean Highlight Pills */}
-          <div className="flex flex-wrap gap-2.5 mb-10">
+          <motion.div 
+            variants={ITEM_VARIANTS}
+            className="flex flex-wrap gap-2.5 mb-10"
+          >
             {[
               'B.Sc. Computer Science, YARSI (3.77 GPA)',
               'AWS Certified AI Practitioner (Score: 719)',
               'Winner, PRAGMA 41 Hackathon (Thailand)'
             ].map((pill) => (
-              <div
+              <motion.div
                 key={pill}
+                whileHover={{ y: -2 }}
+                transition={SPRING_CONFIG.gentle}
                 className={`px-3.5 py-1.5 rounded-lg border font-mono-code text-xs ${
                   isDark
                     ? 'bg-[#121215] border-[#222226] text-zinc-300'
@@ -445,26 +696,34 @@ export default function App() {
                 }`}
               >
                 {pill}
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
 
           {/* Primary Actions & Direct Contact Links */}
-          <div className="flex flex-wrap items-center gap-3">
-            <button
+          <motion.div 
+            variants={ITEM_VARIANTS}
+            className="flex flex-wrap items-center gap-3"
+          >
+            <motion.button
               onClick={() => scrollTo('projects')}
+              whileHover={{ scale: 1.02, backgroundColor: '#059669' }}
+              whileTap={{ scale: 0.98 }}
+              transition={SPRING_CONFIG.gentle}
               className="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-medium text-sm flex items-center space-x-2 transition-colors shadow-xs"
             >
               <span>View Selected Work</span>
               <ChevronRight className="w-4 h-4 stroke-[2]" />
-            </button>
+            </motion.button>
 
-            {/* Direct Download CV Action */}
-            <a
+            <motion.a
               href="/Rizky_Firmansyah_CV.pdf"
               download="Rizky_Firmansyah_CV.pdf"
               target="_blank"
               rel="noopener noreferrer"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={SPRING_CONFIG.gentle}
               className={`px-4 py-2.5 rounded-lg border text-sm font-medium flex items-center space-x-2 transition-colors ${
                 isDark
                   ? 'bg-[#121215] border-emerald-500/40 text-emerald-400 hover:border-emerald-500/70 hover:bg-emerald-500/5'
@@ -473,11 +732,13 @@ export default function App() {
             >
               <Download className="w-4 h-4 stroke-[2]" />
               <span>Download CV</span>
-            </a>
+            </motion.a>
 
-            {/* Email Direct Action */}
-            <a
+            <motion.a
               href="mailto:rizky80firmansyah@gmail.com"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={SPRING_CONFIG.gentle}
               className={`px-4 py-2.5 rounded-lg border text-sm font-medium flex items-center space-x-2 transition-colors ${
                 isDark
                   ? 'bg-[#121215] border-[#222226] text-zinc-200 hover:border-zinc-700 hover:text-white'
@@ -486,13 +747,15 @@ export default function App() {
             >
               <Mail className="w-4 h-4 stroke-[1.5] text-zinc-400" />
               <span>Email</span>
-            </a>
+            </motion.a>
 
-            {/* WhatsApp Direct Action */}
-            <a
+            <motion.a
               href="http://wa.me/6281380482452"
               target="_blank"
               rel="noopener noreferrer"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={SPRING_CONFIG.gentle}
               className={`px-4 py-2.5 rounded-lg border text-sm font-medium flex items-center space-x-2 transition-colors ${
                 isDark
                   ? 'bg-[#121215] border-[#222226] text-zinc-200 hover:border-emerald-500/40 hover:text-emerald-400'
@@ -501,13 +764,15 @@ export default function App() {
             >
               <MessageSquare className="w-4 h-4 stroke-[1.5] text-emerald-500" />
               <span>WhatsApp</span>
-            </a>
+            </motion.a>
 
-            {/* LinkedIn Direct Action */}
-            <a
+            <motion.a
               href="http://www.linkedin.com/in/rizky-firmansyah-sipahutar-a9a9b6287"
               target="_blank"
               rel="noopener noreferrer"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={SPRING_CONFIG.gentle}
               className={`px-4 py-2.5 rounded-lg border text-sm font-medium flex items-center space-x-1.5 transition-colors ${
                 isDark
                   ? 'bg-transparent border-[#222226] text-zinc-400 hover:text-zinc-100 hover:border-zinc-700'
@@ -516,13 +781,15 @@ export default function App() {
             >
               <span>LinkedIn</span>
               <ArrowUpRight className="w-3.5 h-3.5 stroke-[1.5]" />
-            </a>
+            </motion.a>
 
-            {/* GitHub Direct Action */}
-            <a
+            <motion.a
               href="https://github.com/RizkyFirmansyah122"
               target="_blank"
               rel="noopener noreferrer"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={SPRING_CONFIG.gentle}
               className={`px-4 py-2.5 rounded-lg border text-sm font-medium flex items-center space-x-1.5 transition-colors ${
                 isDark
                   ? 'bg-transparent border-[#222226] text-zinc-400 hover:text-zinc-100 hover:border-zinc-700'
@@ -531,11 +798,13 @@ export default function App() {
             >
               <span>GitHub</span>
               <ArrowUpRight className="w-3.5 h-3.5 stroke-[1.5]" />
-            </a>
+            </motion.a>
 
-            {/* Copy Email Helper */}
-            <button
+            <motion.button
               onClick={copyEmail}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={SPRING_CONFIG.gentle}
               title="Copy email to clipboard"
               className={`p-2.5 rounded-lg border text-sm font-medium transition-colors ${
                 isDark
@@ -548,407 +817,493 @@ export default function App() {
               ) : (
                 <Copy className="w-4 h-4 stroke-[1.5]" />
               )}
-            </button>
-          </div>
-        </section>
+            </motion.button>
+          </motion.div>
+        </motion.section>
 
         {/* ==========================================
             2. SELECTED WORK (CLEAN TABBED SHOWCASE)
         ========================================== */}
-        <section id="projects" className="py-16 sm:py-24 border-b border-zinc-800/40 scroll-mt-16">
+        <motion.section 
+          id="projects" 
+          className="py-16 sm:py-24 border-b border-zinc-800/40 scroll-mt-16"
+          initial="hidden"
+          whileInView="visible"
+          variants={SCROLL_REVEAL_VARIANTS}
+          viewport={{ once: true, margin: '-80px' }}
+        >
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4">
-            <div>
+            <motion.div
+              variants={SCROLL_REVEAL_VARIANTS}
+            >
               <h2 className="text-2xl font-bold tracking-tight mb-1">Selected Work</h2>
               <p className={`text-sm ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
                 Production AI systems with interactive architectural previews.
               </p>
-            </div>
+            </motion.div>
 
             {/* Clean Project Switcher Tabs */}
-            <div
+            <motion.div
               className={`inline-flex p-1 rounded-xl border ${
                 isDark ? 'bg-[#121215] border-[#222226]' : 'bg-zinc-100 border-zinc-200'
               }`}
             >
-              <button
-                onClick={() => setActiveProjectTab('viume')}
-                className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
-                  activeProjectTab === 'viume'
-                    ? isDark
-                      ? 'bg-zinc-800 text-white shadow-xs'
-                      : 'bg-white text-zinc-900 shadow-xs'
-                    : isDark
-                    ? 'text-zinc-400 hover:text-zinc-200'
-                    : 'text-zinc-600 hover:text-zinc-900'
-                }`}
-              >
-                01. ViuMe Pathology AI
-              </button>
-              <button
-                onClick={() => setActiveProjectTab('receipt')}
-                className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
-                  activeProjectTab === 'receipt'
-                    ? isDark
-                      ? 'bg-zinc-800 text-white shadow-xs'
-                      : 'bg-white text-zinc-900 shadow-xs'
-                    : isDark
-                    ? 'text-zinc-400 hover:text-zinc-200'
-                    : 'text-zinc-600 hover:text-zinc-900'
-                }`}
-              >
-                02. Receipt VLM Parser
-              </button>
-            </div>
+              {['viume', 'receipt'].map((tab) => (
+                <motion.button
+                  key={tab}
+                  onClick={() => setActiveProjectTab(tab)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={SPRING_CONFIG.gentle}
+                  className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                    activeProjectTab === tab
+                      ? isDark
+                        ? 'bg-zinc-800 text-white shadow-xs'
+                        : 'bg-white text-zinc-900 shadow-xs'
+                      : isDark
+                      ? 'text-zinc-400 hover:text-zinc-200'
+                      : 'text-zinc-600 hover:text-zinc-900'
+                  }`}
+                >
+                  {tab === 'viume' ? '01. ViuMe Pathology AI' : '02. Receipt VLM Parser'}
+                </motion.button>
+              ))}
+            </motion.div>
           </div>
 
-          {/* ------------------------------------------
-              TAB 1: VIUME CLINICAL PATHOLOGY
-          ------------------------------------------ */}
-          {activeProjectTab === 'viume' && (
-            <div
-              className={`rounded-2xl border p-6 sm:p-8 transition-all ${
-                isDark ? 'bg-[#121215] border-[#222226]' : 'bg-white border-zinc-200 shadow-xs'
-              }`}
-            >
-              {/* Card Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-6 border-b border-zinc-800/40">
-                <div>
-                  <div className="font-mono-code text-xs text-emerald-500 mb-1">
-                    YOLOv5x + CBAM Attention + Weighted Boxes Fusion
+          {/* TAB 1: VIUME CLINICAL PATHOLOGY */}
+          <AnimatePresence mode="wait">
+            {activeProjectTab === 'viume' && (
+              <motion.div
+                key="viume"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                transition={{ duration: 0.2 }}
+                className={`rounded-2xl border p-6 sm:p-8 transition-all ${
+                  isDark ? 'bg-[#121215] border-[#222226]' : 'bg-white border-zinc-200 shadow-xs'
+                }`}
+              >
+                {/* Card Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-6 border-b border-zinc-800/40">
+                  <div>
+                    <div className="font-mono-code text-xs text-emerald-500 mb-1">
+                      YOLOv5x + CBAM Attention + Weighted Boxes Fusion
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-bold tracking-tight">
+                      ViuMe — Clinical Cervical Cancer Screening
+                    </h3>
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-bold tracking-tight">
-                    ViuMe — Clinical Cervical Cancer Screening
-                  </h3>
+
+                  <motion.a
+                    href="https://viume.yarsi.ai/login"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={SPRING_CONFIG.gentle}
+                    className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-medium text-xs transition-colors shrink-0 self-start sm:self-auto shadow-xs"
+                  >
+                    <span>Visit Live Platform</span>
+                    <ArrowUpRight className="w-4 h-4 stroke-[2]" />
+                  </motion.a>
                 </div>
 
-                <a
-                  href="https://viume.yarsi.ai/login"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-medium text-xs transition-colors shrink-0 self-start sm:self-auto shadow-xs"
-                >
-                  <span>Visit Live Platform</span>
-                  <ArrowUpRight className="w-4 h-4 stroke-[2]" />
-                </a>
-              </div>
+                {/* 3 Concise Summary Points */}
+                <ul className={`space-y-3 text-sm sm:text-base mb-8 ${isDark ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                  <li className="flex items-start space-x-3">
+                    <span className="text-emerald-500 font-mono-code text-xs mt-1">01</span>
+                    <span>
+                      Processed <strong className={isDark ? 'text-white' : 'text-black'}>1GB+ Whole Slide Images (WSI)</strong> from private clinical datasets using systematic cropping, standardization, and Roboflow annotation.
+                    </span>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <span className="text-emerald-500 font-mono-code text-xs mt-1">02</span>
+                    <span>
+                      Integrated <strong className={isDark ? 'text-white' : 'text-black'}>CBAM attention</strong> and <strong className={isDark ? 'text-white' : 'text-black'}>Weighted Boxes Fusion (WBF)</strong> into YOLOv5x to accurately localize small, clustered abnormal cervical cells.
+                    </span>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <span className="text-emerald-500 font-mono-code text-xs mt-1">03</span>
+                    <span>
+                      Validated diagnostic sensitivity with the Head of Anatomical Pathology and deployed into <strong className={isDark ? 'text-white' : 'text-black'}>ViuMe</strong> for real-time clinical decision support.
+                    </span>
+                  </li>
+                </ul>
 
-              {/* 3 Concise Summary Points */}
-              <ul className={`space-y-3 text-sm sm:text-base mb-8 ${isDark ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                <li className="flex items-start space-x-3">
-                  <span className="text-emerald-500 font-mono-code text-xs mt-1">01</span>
-                  <span>
-                    Processed <strong className={isDark ? 'text-white' : 'text-black'}>1GB+ Whole Slide Images (WSI)</strong> from private clinical datasets using systematic cropping, standardization, and Roboflow annotation.
-                  </span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <span className="text-emerald-500 font-mono-code text-xs mt-1">02</span>
-                  <span>
-                    Integrated <strong className={isDark ? 'text-white' : 'text-black'}>CBAM attention</strong> and <strong className={isDark ? 'text-white' : 'text-black'}>Weighted Boxes Fusion (WBF)</strong> into YOLOv5x to accurately localize small, clustered abnormal cervical cells.
-                  </span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <span className="text-emerald-500 font-mono-code text-xs mt-1">03</span>
-                  <span>
-                    Validated diagnostic sensitivity with the Head of Anatomical Pathology and deployed into <strong className={isDark ? 'text-white' : 'text-black'}>ViuMe</strong> for real-time clinical decision support.
-                  </span>
-                </li>
-              </ul>
+                {/* Interactive Demo Frame */}
+                <div className="rounded-xl border border-zinc-800 bg-[#09090B] p-4 sm:p-6 text-zinc-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <span className="font-mono-code text-xs text-zinc-400">
+                      INTERACTIVE PREVIEW: Toggle model pipeline stage
+                    </span>
 
-              {/* Simplified Interactive Demo Frame */}
-              <div className="rounded-xl border border-zinc-800 bg-[#09090B] p-4 sm:p-6 text-zinc-100">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                  <span className="font-mono-code text-xs text-zinc-400">
-                    INTERACTIVE PREVIEW: Toggle model pipeline stage
-                  </span>
-
-                  {/* 3-Button Segmented Control */}
-                  <div className="inline-flex p-1 rounded-lg bg-zinc-900 border border-zinc-800 font-mono-code text-xs">
-                    {[
-                      { id: 'raw', label: 'Raw Image' },
-                      { id: 'baseline', label: 'Standard YOLO' },
-                      { id: 'ours', label: 'YOLOv5x + CBAM + WBF' }
-                    ].map((btn) => (
-                      <button
-                        key={btn.id}
-                        onClick={() => setViumeStage(btn.id)}
-                        className={`px-3 py-1.5 rounded-md transition-colors ${
-                          viumeStage === btn.id
-                            ? 'bg-emerald-500 text-zinc-950 font-semibold'
-                            : 'text-zinc-400 hover:text-zinc-200'
-                        }`}
-                      >
-                        {btn.label}
-                      </button>
-                    ))}
+                    {/* 3-Button Segmented Control */}
+                    <div className="inline-flex p-1 rounded-lg bg-zinc-900 border border-zinc-800 font-mono-code text-xs">
+                      {[
+                        { id: 'raw', label: 'Raw Image' },
+                        { id: 'baseline', label: 'Standard YOLO' },
+                        { id: 'ours', label: 'YOLOv5x + CBAM + WBF' }
+                      ].map((btn) => (
+                        <motion.button
+                          key={btn.id}
+                          onClick={() => setViumeStage(btn.id)}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          transition={SPRING_CONFIG.gentle}
+                          className={`px-3 py-1.5 rounded-md transition-colors ${
+                            viumeStage === btn.id
+                              ? 'bg-emerald-500 text-zinc-950 font-semibold'
+                              : 'text-zinc-400 hover:text-zinc-200'
+                          }`}
+                        >
+                          {btn.label}
+                        </motion.button>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                {/* Clean Pathology Visual Canvas */}
-                <div className="relative w-full h-64 sm:h-72 rounded-lg border border-zinc-800/80 bg-[#0D0E12] overflow-hidden select-none">
-                  <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <defs>
-                      <radialGradient id="cbamGlow" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" stopColor="#10B981" stopOpacity="0.35" />
-                        <stop offset="100%" stopColor="#0D0E12" stopOpacity="0" />
-                      </radialGradient>
-                    </defs>
+                  {/* Clean Pathology Visual Canvas */}
+                  <motion.div 
+                    className="relative w-full h-64 sm:h-72 rounded-lg border border-zinc-800/80 bg-[#0D0E12] overflow-hidden select-none"
+                    key={viumeStage}
+                    initial={{ opacity: 0.8 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <LaserScanline />
+                    
+                    <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                      <defs>
+                        <radialGradient id="cbamGlow" cx="50%" cy="50%" r="50%">
+                          <stop offset="0%" stopColor="#10B981" stopOpacity="0.35" />
+                          <stop offset="100%" stopColor="#0D0E12" stopOpacity="0" />
+                        </radialGradient>
+                      </defs>
 
-                    {/* Subtle Grid */}
-                    <g stroke="rgba(255,255,255,0.03)" strokeWidth="0.3">
-                      <line x1="25" y1="0" x2="25" y2="100" />
-                      <line x1="50" y1="0" x2="50" y2="100" />
-                      <line x1="75" y1="0" x2="75" y2="100" />
-                      <line x1="0" y1="33" x2="100" y2="33" />
-                      <line x1="0" y1="66" x2="100" y2="66" />
-                    </g>
+                      {/* Subtle Grid */}
+                      <g stroke="rgba(255,255,255,0.03)" strokeWidth="0.3">
+                        <line x1="25" y1="0" x2="25" y2="100" />
+                        <line x1="50" y1="0" x2="50" y2="100" />
+                        <line x1="75" y1="0" x2="75" y2="100" />
+                        <line x1="0" y1="33" x2="100" y2="33" />
+                        <line x1="0" y1="66" x2="100" y2="66" />
+                      </g>
 
-                    {/* Render Simulated Cells */}
-                    {VIUME_CELLS.map((cell) => {
-                      const cx = cell.x + cell.w / 2;
-                      const cy = cell.y + cell.h / 2;
+                      {/* Render Simulated Cells */}
+                      {VIUME_CELLS.map((cell) => {
+                        const cx = cell.x + cell.w / 2;
+                        const cy = cell.y + cell.h / 2;
 
-                      return (
-                        <g key={cell.id}>
-                          {/* CBAM Attention Aura in 'ours' mode */}
-                          {viumeStage === 'ours' && (
-                            <circle cx={cx} cy={cy} r={cell.r * 2.4} fill="url(#cbamGlow)" />
-                          )}
+                        return (
+                          <motion.g 
+                            key={cell.id}
+                            initial={{ opacity: 0, scale: 0.92 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ ...SPRING_CONFIG.gentle, duration: 0.3 }}
+                          >
+                            {/* CBAM Attention Aura in 'ours' mode */}
+                            {viumeStage === 'ours' && (
+                              <circle cx={cx} cy={cy} r={cell.r * 2.4} fill="url(#cbamGlow)" />
+                            )}
 
-                          {/* Cytoplasm */}
-                          <ellipse
-                            cx={cx}
-                            cy={cy}
-                            rx={cell.r * 1.3}
-                            ry={cell.r}
-                            fill="rgba(244, 63, 94, 0.14)"
-                            stroke="rgba(244, 63, 94, 0.35)"
-                            strokeWidth="0.4"
-                          />
+                            {/* Cytoplasm */}
+                            <ellipse
+                              cx={cx}
+                              cy={cy}
+                              rx={cell.r * 1.3}
+                              ry={cell.r}
+                              fill="rgba(244, 63, 94, 0.14)"
+                              stroke="rgba(244, 63, 94, 0.35)"
+                              strokeWidth="0.4"
+                            />
 
-                          {/* Nucleus */}
-                          <circle
-                            cx={cx}
-                            cy={cy}
-                            r={cell.r * 0.5}
-                            fill="rgba(225, 29, 72, 0.65)"
-                          />
+                            {/* Nucleus */}
+                            <circle
+                              cx={cx}
+                              cy={cy}
+                              r={cell.r * 0.5}
+                              fill="rgba(225, 29, 72, 0.65)"
+                            />
 
-                          {/* Baseline YOLO Boxes (Shows duplicate overlaps & misses micro cells) */}
-                          {viumeStage === 'baseline' && cell.showInBaseline && (
-                            <>
+                            {/* Baseline YOLO Boxes */}
+                            {viumeStage === 'baseline' && cell.showInBaseline && (
+                              <>
+                                <rect
+                                  x={cell.x}
+                                  y={cell.y}
+                                  width={cell.w}
+                                  height={cell.h}
+                                  fill="none"
+                                  stroke="#F59E0B"
+                                  strokeWidth="0.6"
+                                />
+                                {cell.duplicateBox && (
+                                  <rect
+                                    x={cell.duplicateBox.x}
+                                    y={cell.duplicateBox.y}
+                                    width={cell.duplicateBox.w}
+                                    height={cell.duplicateBox.h}
+                                    fill="none"
+                                    stroke="#EF4444"
+                                    strokeWidth="0.5"
+                                    strokeDasharray="1.5,1"
+                                  />
+                                )}
+                              </>
+                            )}
+
+                            {/* Proposed YOLOv5x + CBAM + WBF Boxes */}
+                            {viumeStage === 'ours' && (
                               <rect
                                 x={cell.x}
                                 y={cell.y}
                                 width={cell.w}
                                 height={cell.h}
-                                fill="none"
-                                stroke="#F59E0B"
-                                strokeWidth="0.6"
+                                fill="rgba(16, 185, 129, 0.05)"
+                                stroke="#10B981"
+                                strokeWidth="0.7"
                               />
-                              {cell.duplicateBox && (
-                                <rect
-                                  x={cell.duplicateBox.x}
-                                  y={cell.duplicateBox.y}
-                                  width={cell.duplicateBox.w}
-                                  height={cell.duplicateBox.h}
-                                  fill="none"
-                                  stroke="#EF4444"
-                                  strokeWidth="0.5"
-                                  strokeDasharray="1.5,1"
-                                />
-                              )}
-                            </>
-                          )}
+                            )}
+                          </motion.g>
+                        );
+                      })}
+                    </svg>
 
-                          {/* Proposed YOLOv5x + CBAM + WBF Boxes */}
-                          {viumeStage === 'ours' && (
-                            <rect
-                              x={cell.x}
-                              y={cell.y}
-                              width={cell.w}
-                              height={cell.h}
-                              fill="rgba(16, 185, 129, 0.05)"
-                              stroke="#10B981"
-                              strokeWidth="0.7"
-                            />
-                          )}
-                        </g>
-                      );
-                    })}
-                  </svg>
-
-                  {/* Clean Floating Confidence Labels */}
-                  {viumeStage === 'baseline' &&
-                    VIUME_CELLS.map((cell) =>
-                      cell.showInBaseline ? (
-                        <div
-                          key={cell.id}
-                          style={{ left: `${cell.x}%`, top: `${cell.y - 8}%` }}
-                          className="absolute px-1.5 py-0.5 rounded-xs bg-amber-500 text-zinc-950 font-mono-code text-[10px] font-semibold"
-                        >
-                          {cell.label} (Overlapping Box)
-                        </div>
-                      ) : (
-                        <div
-                          key={cell.id}
-                          style={{ left: `${cell.x}%`, top: `${cell.y - 8}%` }}
-                          className="absolute px-1.5 py-0.5 rounded-xs bg-red-950/90 border border-red-500/50 text-red-300 font-mono-code text-[10px]"
-                        >
-                          Missed Micro Cell
-                        </div>
-                      )
-                    )}
-
-                  {viumeStage === 'ours' &&
-                    VIUME_CELLS.map((cell) => (
-                      <div
-                        key={cell.id}
-                        style={{ left: `${cell.x}%`, top: `${cell.y - 8}%` }}
-                        className="absolute px-1.5 py-0.5 rounded-xs bg-emerald-500 text-zinc-950 font-mono-code text-[10px] font-semibold shadow-xs"
-                      >
-                        {cell.label} · {cell.conf}
-                      </div>
-                    ))}
-                </div>
-
-                {/* Single Concise Status Line */}
-                <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-mono-code text-xs text-zinc-400 pt-3 border-t border-zinc-800/80">
-                  <span>
-                    {viumeStage === 'raw' &&
-                      'Status: Unannotated 1024×1024 WSI patch with small dysplastic cells.'}
+                    {/* Clean Floating Confidence Labels */}
                     {viumeStage === 'baseline' &&
-                      'Status: Standard YOLO misses 2 micro-scale cells and produces duplicate overlapping boxes.'}
+                      VIUME_CELLS.map((cell) =>
+                        cell.showInBaseline ? (
+                          <motion.div
+                            key={cell.id}
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={SPRING_CONFIG.gentle}
+                            style={{ left: `${cell.x}%`, top: `${cell.y - 8}%` }}
+                            className="absolute px-1.5 py-0.5 rounded-xs bg-amber-500 text-zinc-950 font-mono-code text-[10px] font-semibold"
+                          >
+                            {cell.label} (Overlapping Box)
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            key={cell.id}
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={SPRING_CONFIG.gentle}
+                            style={{ left: `${cell.x}%`, top: `${cell.y - 8}%` }}
+                            className="absolute px-1.5 py-0.5 rounded-xs bg-red-950/90 border border-red-500/50 text-red-300 font-mono-code text-[10px]"
+                          >
+                            Missed Micro Cell
+                          </motion.div>
+                        )
+                      )}
+
                     {viumeStage === 'ours' &&
-                      'Status: CBAM recovers micro-scale abnormal cells while WBF fuses overlapping predictions (4/4 detected).'}
-                  </span>
-                  <span className="text-emerald-400 shrink-0">Recall Priority Mode</span>
-                </div>
-              </div>
+                      VIUME_CELLS.map((cell) => (
+                        <motion.div
+                          key={cell.id}
+                          initial={{ opacity: 0, y: 4, scale: 0.8 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          transition={SPRING_CONFIG.gentle}
+                          style={{ left: `${cell.x}%`, top: `${cell.y - 8}%` }}
+                          className="absolute px-1.5 py-0.5 rounded-xs bg-emerald-500 text-zinc-950 font-mono-code text-[10px] font-semibold shadow-xs"
+                        >
+                          {cell.label} · {cell.conf}
+                        </motion.div>
+                      ))}
+                  </motion.div>
 
-              {/* Tech Tags */}
-              <div className="flex flex-wrap gap-2 mt-6">
-                {['Python', 'PyTorch', 'YOLOv5x / v8 / v10', 'CBAM Attention', 'Weighted Boxes Fusion', 'Roboflow', 'ViuMe Web'].map(
-                  (tag) => (
-                    <span
-                      key={tag}
-                      className={`px-2.5 py-1 rounded-md font-mono-code text-xs border ${
-                        isDark
-                          ? 'bg-zinc-900/60 border-zinc-800 text-zinc-400'
-                          : 'bg-zinc-100 border-zinc-200 text-zinc-700'
-                      }`}
-                    >
-                      {tag}
+                  {/* Single Concise Status Line */}
+                  <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-mono-code text-xs text-zinc-400 pt-3 border-t border-zinc-800/80">
+                    <span>
+                      {viumeStage === 'raw' &&
+                        'Status: Unannotated 1024×1024 WSI patch with small dysplastic cells.'}
+                      {viumeStage === 'baseline' &&
+                        'Status: Standard YOLO misses 2 micro-scale cells and produces duplicate overlapping boxes.'}
+                      {viumeStage === 'ours' &&
+                        'Status: CBAM recovers micro-scale abnormal cells while WBF fuses overlapping predictions (4/4 detected).'}
                     </span>
-                  )
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ------------------------------------------
-              TAB 2: INTELLIGENT RECEIPT DIGITIZATION
-          ------------------------------------------ */}
-          {activeProjectTab === 'receipt' && (
-            <div
-              className={`rounded-2xl border p-6 sm:p-8 transition-all ${
-                isDark ? 'bg-[#121215] border-[#222226]' : 'bg-white border-zinc-200 shadow-xs'
-              }`}
-            >
-              {/* Card Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-6 border-b border-zinc-800/40">
-                <div>
-                  <div className="font-mono-code text-xs text-emerald-500 mb-1">
-                    Vision-Language Models (VLM) & Pydantic Validation
+                    <span className="text-emerald-400 shrink-0">Recall Priority Mode</span>
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-bold tracking-tight">
-                    Intelligent Receipt Digitization & Accounting
-                  </h3>
                 </div>
 
-                <a
-                  href="https://intelligent-receipt-digitization-ac.vercel.app/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-medium text-xs transition-colors shrink-0 self-start sm:self-auto shadow-xs"
+                {/* Tech Tags */}
+                <div className="flex flex-wrap gap-2 mt-6">
+                  {['Python', 'PyTorch', 'YOLOv5x / v8 / v10', 'CBAM Attention', 'Weighted Boxes Fusion', 'Roboflow', 'ViuMe Web'].map(
+                    (tag) => (
+                      <motion.span
+                        key={tag}
+                        whileHover={{ scale: 1.05 }}
+                        transition={SPRING_CONFIG.gentle}
+                        className={`px-2.5 py-1 rounded-md font-mono-code text-xs border cursor-default ${
+                          isDark
+                            ? 'bg-zinc-900/60 border-zinc-800 text-zinc-400'
+                            : 'bg-zinc-100 border-zinc-200 text-zinc-700'
+                        }`}
+                      >
+                        {tag}
+                      </motion.span>
+                    )
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* TAB 2: INTELLIGENT RECEIPT DIGITIZATION */}
+            {activeProjectTab === 'receipt' && (
+              <motion.div
+                key="receipt"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                transition={{ duration: 0.2 }}
+                className={`rounded-2xl border p-6 sm:p-8 transition-all ${
+                  isDark ? 'bg-[#121215] border-[#222226]' : 'bg-white border-zinc-200 shadow-xs'
+                }`}
+              >
+                {/* Card Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-6 border-b border-zinc-800/40">
+                  <div>
+                    <div className="font-mono-code text-xs text-emerald-500 mb-1">
+                      Vision-Language Models (VLM) & Pydantic Validation
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-bold tracking-tight">
+                      Intelligent Receipt Digitization & Accounting
+                    </h3>
+                  </div>
+
+                  <motion.a
+                    href="https://intelligent-receipt-digitization-ac.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={SPRING_CONFIG.gentle}
+                    className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-medium text-xs transition-colors shrink-0 self-start sm:self-auto shadow-xs"
+                  >
+                    <span>Try Live Web App</span>
+                    <ArrowUpRight className="w-4 h-4 stroke-[2]" />
+                  </motion.a>
+                </div>
+
+                {/* 3 Concise Summary Points */}
+                <ul className={`space-y-3 text-sm sm:text-base mb-8 ${isDark ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                  <li className="flex items-start space-x-3">
+                    <span className="text-emerald-500 font-mono-code text-xs mt-1">01</span>
+                    <span>
+                      Built a multimodal parser using <strong className={isDark ? 'text-white' : 'text-black'}>Vision-Language Models (VLMs)</strong> to extract messy handwritten invoices into strict <strong className={isDark ? 'text-white' : 'text-black'}>Pydantic JSON schemas</strong>.
+                    </span>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <span className="text-emerald-500 font-mono-code text-xs mt-1">02</span>
+                    <span>
+                      Engineered custom validation logic to isolate partial <strong className={isDark ? 'text-white' : 'text-black'}>down-payments (DP)</strong> and prevent reseller debt carry-over double-counting.
+                    </span>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <span className="text-emerald-500 font-mono-code text-xs mt-1">03</span>
+                    <span>
+                      Deployed a full-stack verification interface (<strong className={isDark ? 'text-white' : 'text-black'}>Next.js, TypeScript</strong>) on Vercel & Render with automated Google Sheets/Drive data pipelines.
+                    </span>
+                  </li>
+                </ul>
+
+                {/* Clean 2-Column Interactive Demo Card */}
+                <motion.div 
+                  className="rounded-xl border border-zinc-800 bg-[#09090B] p-4 sm:p-6 text-zinc-100"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 }}
                 >
-                  <span>Try Live Web App</span>
-                  <ArrowUpRight className="w-4 h-4 stroke-[2]" />
-                </a>
-              </div>
-
-              {/* 3 Concise Summary Points */}
-              <ul className={`space-y-3 text-sm sm:text-base mb-8 ${isDark ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                <li className="flex items-start space-x-3">
-                  <span className="text-emerald-500 font-mono-code text-xs mt-1">01</span>
-                  <span>
-                    Built a multimodal parser using <strong className={isDark ? 'text-white' : 'text-black'}>Vision-Language Models (VLMs)</strong> to extract messy handwritten invoices into strict <strong className={isDark ? 'text-white' : 'text-black'}>Pydantic JSON schemas</strong>.
-                  </span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <span className="text-emerald-500 font-mono-code text-xs mt-1">02</span>
-                  <span>
-                    Engineered custom validation logic to isolate partial <strong className={isDark ? 'text-white' : 'text-black'}>down-payments (DP)</strong> and prevent reseller debt carry-over double-counting.
-                  </span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <span className="text-emerald-500 font-mono-code text-xs mt-1">03</span>
-                  <span>
-                    Deployed a full-stack verification interface (<strong className={isDark ? 'text-white' : 'text-black'}>Next.js, TypeScript</strong>) on Vercel & Render with automated Google Sheets/Drive data pipelines.
-                  </span>
-                </li>
-              </ul>
-
-              {/* Clean 2-Column Interactive Demo Card */}
-              <div className="rounded-xl border border-zinc-800 bg-[#09090B] p-4 sm:p-6 text-zinc-100">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                  <span className="font-mono-code text-xs text-zinc-400">
-                    RECONCILIATION PREVIEW: Handwritten Reseller Invoice
-                  </span>
-                  <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono-code text-xs">
-                    <CheckCircle2 className="w-3.5 h-3.5 stroke-[2]" />
-                    <span>Double-Counting Prevented</span>
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Left: Stylized Receipt Input Summary */}
-                  <div className="p-4 rounded-lg border border-zinc-800 bg-[#0E0E12] flex flex-col justify-between">
-                    <div>
-                      <div className="font-mono-code text-[11px] text-zinc-500 pb-2 mb-3 border-b border-dashed border-zinc-800">
-                        INPUT: HANDWRITTEN NOTA (AGEN BERKAH)
-                      </div>
-
-                      <div className="space-y-2.5 text-xs font-mono-code">
-                        <div className="flex justify-between text-zinc-300">
-                          <span>Items Subtotal (New Order)</span>
-                          <span>Rp 1.450.000</span>
-                        </div>
-                        <div className="flex justify-between p-2 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300">
-                          <span>+ Old Debt Carry-Over (Bon Lama)</span>
-                          <span>Rp 200.000</span>
-                        </div>
-                        <div className="flex justify-between text-zinc-400 pt-1 border-t border-zinc-800">
-                          <span>Written Grand Total on Paper</span>
-                          <span>Rp 1.650.000</span>
-                        </div>
-                        <div className="flex justify-between p-2 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
-                          <span>- Paid Down Payment (DP Tunai)</span>
-                          <span>Rp 500.000</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-zinc-800/80 text-[11px] text-zinc-400 leading-relaxed">
-                      Standard OCR blindly records <strong className="text-zinc-200">Rp 1.650.000</strong> as new revenue, double-counting the Rp 200.000 old debt.
-                    </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <span className="font-mono-code text-xs text-zinc-400">
+                      RECONCILIATION PREVIEW: Handwritten Reseller Invoice
+                    </span>
+                    <motion.span 
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={SPRING_CONFIG.gentle}
+                      className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono-code text-xs"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 stroke-[2]" />
+                      <span>Double-Counting Prevented</span>
+                    </motion.span>
                   </div>
 
-                  {/* Right: Clean Pydantic JSON Output */}
-                  <div className="p-4 rounded-lg border border-zinc-800 bg-[#070709] font-mono-code text-xs overflow-x-auto">
-                    <div className="text-[11px] text-zinc-500 pb-2 mb-2 border-b border-zinc-800">
-                      OUTPUT: PYDANTIC VALIDATED SCHEMA
-                    </div>
-                    <pre className="text-emerald-400 leading-relaxed text-[11px]">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Left: Stylized Receipt Input Summary */}
+                    <motion.div 
+                      initial={{ x: -8, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.15 }}
+                      className="p-4 rounded-lg border border-zinc-800 bg-[#0E0E12] flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="font-mono-code text-[11px] text-zinc-500 pb-2 mb-3 border-b border-dashed border-zinc-800">
+                          INPUT: HANDWRITTEN NOTA (AGEN BERKAH)
+                        </div>
+
+                        <div className="space-y-2.5 text-xs font-mono-code">
+                          <motion.div 
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="flex justify-between text-zinc-300"
+                          >
+                            <span>Items Subtotal (New Order)</span>
+                            <span>Rp 1.450.000</span>
+                          </motion.div>
+                          <motion.div 
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.25 }}
+                            className="flex justify-between p-2 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300"
+                          >
+                            <span>+ Old Debt Carry-Over (Bon Lama)</span>
+                            <span>Rp 200.000</span>
+                          </motion.div>
+                          <motion.div 
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
+                            className="flex justify-between text-zinc-400 pt-1 border-t border-zinc-800"
+                          >
+                            <span>Written Grand Total on Paper</span>
+                            <span>Rp 1.650.000</span>
+                          </motion.div>
+                          <motion.div 
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.35 }}
+                            className="flex justify-between p-2 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"
+                          >
+                            <span>- Paid Down Payment (DP Tunai)</span>
+                            <span>Rp 500.000</span>
+                          </motion.div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-zinc-800/80 text-[11px] text-zinc-400 leading-relaxed">
+                        Standard OCR blindly records <strong className="text-zinc-200">Rp 1.650.000</strong> as new revenue, double-counting the Rp 200.000 old debt.
+                      </div>
+                    </motion.div>
+
+                    {/* Right: Clean Pydantic JSON Output */}
+                    <motion.div 
+                      initial={{ x: 8, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.15 }}
+                      className="p-4 rounded-lg border border-zinc-800 bg-[#070709] font-mono-code text-xs overflow-x-auto"
+                    >
+                      <div className="text-[11px] text-zinc-500 pb-2 mb-2 border-b border-zinc-800">
+                        OUTPUT: PYDANTIC VALIDATED SCHEMA
+                      </div>
+                      <motion.pre 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="text-emerald-400 leading-relaxed text-[11px]"
+                      >
 {`{
   "merchant": "Agen Berkah",
   "new_order_subtotal": 1450000,
@@ -961,36 +1316,46 @@ export default function App() {
   "schema_valid": true,
   "sheets_sync": "ROW_APPENDED"
 }`}
-                    </pre>
+                      </motion.pre>
+                    </motion.div>
                   </div>
-                </div>
-              </div>
+                </motion.div>
 
-              {/* Tech Tags */}
-              <div className="flex flex-wrap gap-2 mt-6">
-                {['Vision-Language Models', 'Pydantic', 'Next.js', 'TypeScript', 'Google Sheets & Drive API', 'GCP Auth', 'Vercel & Render'].map(
-                  (tag) => (
-                    <span
-                      key={tag}
-                      className={`px-2.5 py-1 rounded-md font-mono-code text-xs border ${
-                        isDark
-                          ? 'bg-zinc-900/60 border-zinc-800 text-zinc-400'
-                          : 'bg-zinc-100 border-zinc-200 text-zinc-700'
-                      }`}
-                    >
-                      {tag}
-                    </span>
-                  )
-                )}
-              </div>
-            </div>
-          )}
-        </section>
+                {/* Tech Tags */}
+                <div className="flex flex-wrap gap-2 mt-6">
+                  {['Vision-Language Models', 'Pydantic', 'Next.js', 'TypeScript', 'Google Sheets & Drive API', 'GCP Auth', 'Vercel & Render'].map(
+                    (tag) => (
+                      <motion.span
+                        key={tag}
+                        whileHover={{ scale: 1.05 }}
+                        transition={SPRING_CONFIG.gentle}
+                        className={`px-2.5 py-1 rounded-md font-mono-code text-xs border cursor-default ${
+                          isDark
+                            ? 'bg-zinc-900/60 border-zinc-800 text-zinc-400'
+                            : 'bg-zinc-100 border-zinc-200 text-zinc-700'
+                        }`}
+                      >
+                        {tag}
+                      </motion.span>
+                    )
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.section>
 
         {/* ==========================================
-            3. EXPERIENCE & ACHIEVEMENTS (CLEAN TIMELINE)
+            3. EXPERIENCE & ACHIEVEMENTS
         ========================================== */}
-        <section id="experience" className="py-16 sm:py-24 border-b border-zinc-800/40 scroll-mt-16">
+        <motion.section 
+          id="experience" 
+          className="py-16 sm:py-24 border-b border-zinc-800/40 scroll-mt-16"
+          initial="hidden"
+          whileInView="visible"
+          variants={SCROLL_REVEAL_VARIANTS}
+          viewport={{ once: true, margin: '-80px' }}
+        >
           <div className="mb-12">
             <h2 className="text-2xl font-bold tracking-tight mb-1">Experience & Achievements</h2>
             <p className={`text-sm ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
@@ -1000,17 +1365,25 @@ export default function App() {
 
           <div className="space-y-10">
             {EXPERIENCE.map((item, idx) => (
-              <div
+              <motion.div
                 key={idx}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ ...SPRING_CONFIG.default, delay: idx * 0.1 }}
+                viewport={{ once: true, margin: '-40px' }}
                 className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-6 items-start"
               >
                 {/* Left: Date / Period */}
                 <div className="sm:col-span-4 font-mono-code text-xs pt-1 text-zinc-500">
                   {item.isHighlight ? (
-                    <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-medium">
+                    <motion.span 
+                      whileHover={{ scale: 1.05 }}
+                      transition={SPRING_CONFIG.gentle}
+                      className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-medium cursor-default"
+                    >
                       <Award className="w-3.5 h-3.5 stroke-[1.5]" />
                       <span>{item.period}</span>
-                    </span>
+                    </motion.span>
                   ) : (
                     <span>{item.period}</span>
                   )}
@@ -1033,22 +1406,34 @@ export default function App() {
                     ))}
                   </ul>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
-        </section>
+        </motion.section>
 
         {/* ==========================================
             4. VERIFIED CERTIFICATIONS & CREDENTIALS
-            (ENHANCED INTERACTIVE BENTO GRID)
         ========================================== */}
-        <section id="credentials" className="py-16 sm:py-24 border-b border-zinc-800/40 scroll-mt-16">
-          {/* ── SECTION HEADER ── */}
+        <motion.section 
+          id="credentials" 
+          className="py-16 sm:py-24 border-b border-zinc-800/40 scroll-mt-16"
+          initial="hidden"
+          whileInView="visible"
+          variants={SCROLL_REVEAL_VARIANTS}
+          viewport={{ once: true, margin: '-80px' }}
+        >
+          {/* SECTION HEADER */}
           <div className="mb-10">
-            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-mono-code mb-4 ${isDark ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              transition={SPRING_CONFIG.gentle}
+              viewport={{ once: true }}
+              className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-mono-code mb-4 ${isDark ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}
+            >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span>Official Institutional Verification</span>
-            </div>
+            </motion.div>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
               Verified Certifications & Credentials
             </h2>
@@ -1057,12 +1442,17 @@ export default function App() {
             </p>
           </div>
 
-          {/* ── FEATURED CARD: AWS (Full-width highlight) ── */}
+          {/* FEATURED CARD: AWS */}
           {CREDENTIALS.filter(c => c.isFeatured).map((cred) => {
             const IconComponent = cred.icon;
             return (
-              <div
+              <motion.div
                 key={cred.id}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                whileHover={{ borderColor: isDark ? '#059669' : '#059669', boxShadow: isDark ? '0 0 20px rgba(16, 185, 129, 0.1)' : '0 0 20px rgba(16, 185, 129, 0.05)' }}
+                transition={SPRING_CONFIG.gentle}
+                viewport={{ once: true }}
                 className={`rounded-2xl border p-6 sm:p-8 mb-5 relative overflow-hidden transition-all duration-200 ${
                   isDark
                     ? 'bg-gradient-to-br from-emerald-500/[0.07] via-[#121215] to-[#121215] border-emerald-500/35 ring-1 ring-emerald-500/20'
@@ -1077,9 +1467,12 @@ export default function App() {
                   <div className="flex-1 min-w-0">
                     {/* Issuer row */}
                     <div className="flex items-center gap-3 mb-5">
-                      <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-emerald-500/12 border-emerald-500/30 text-emerald-400' : 'bg-emerald-100 border-emerald-200 text-emerald-700'}`}>
+                      <motion.div 
+                        whileHover={{ scale: 1.1 }}
+                        className={`p-2.5 rounded-xl border ${isDark ? 'bg-emerald-500/12 border-emerald-500/30 text-emerald-400' : 'bg-emerald-100 border-emerald-200 text-emerald-700'}`}
+                      >
                         <IconComponent className="w-5 h-5 stroke-[1.8]" />
-                      </div>
+                      </motion.div>
                       <div>
                         <p className="font-mono-code text-[10px] text-zinc-500 uppercase tracking-widest">{cred.issuerFull}</p>
                         <p className="font-mono-code text-[10px] text-emerald-500 font-medium">{cred.verifyVia}</p>
@@ -1098,53 +1491,78 @@ export default function App() {
 
                     {/* Competency tags */}
                     <div className="flex flex-wrap gap-1.5 mb-5">
-                      {cred.tags.map(tag => (
-                        <span key={tag} className={`px-2.5 py-1 rounded-md font-mono-code text-[11px] border ${isDark ? 'bg-zinc-900/70 border-zinc-800 text-zinc-400' : 'bg-white border-zinc-200 text-zinc-600'}`}>
+                      {cred.tags.map((tag, idx) => (
+                        <motion.span 
+                          key={tag}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          whileInView={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: idx * 0.05 }}
+                          viewport={{ once: true }}
+                          className={`px-2.5 py-1 rounded-md font-mono-code text-[11px] border ${isDark ? 'bg-zinc-900/70 border-zinc-800 text-zinc-400' : 'bg-white border-zinc-200 text-zinc-600'}`}
+                        >
                           {tag}
-                        </span>
+                        </motion.span>
                       ))}
                     </div>
 
                     {/* Credential ID pill */}
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border font-mono-code text-[10px] ${isDark ? 'bg-zinc-900/60 border-zinc-800 text-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-500'}`}>
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      whileInView={{ opacity: 1 }}
+                      viewport={{ once: true }}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border font-mono-code text-[10px] ${isDark ? 'bg-zinc-900/60 border-zinc-800 text-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-500'}`}
+                    >
                       <ShieldCheck className="w-3 h-3 text-emerald-500" />
                       <span>Credential ID: {cred.credentialId}</span>
-                    </div>
+                    </motion.div>
                   </div>
 
                   {/* Right column — Score box + Verify button */}
                   <div className="flex sm:flex-col items-center sm:items-end gap-3 shrink-0">
                     {/* Score display */}
-                    <div className={`flex flex-col items-center justify-center w-24 h-24 rounded-2xl border ${isDark ? 'bg-zinc-900/60 border-zinc-800' : 'bg-white border-zinc-200 shadow-xs'}`}>
+                    <motion.div 
+                      whileHover={{ scale: 1.05 }}
+                      className={`flex flex-col items-center justify-center w-24 h-24 rounded-2xl border ${isDark ? 'bg-zinc-900/60 border-zinc-800' : 'bg-white border-zinc-200 shadow-xs'}`}
+                    >
                       <span className={`font-mono-code text-[9px] uppercase tracking-widest mb-1 ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>Score</span>
                       <span className="font-mono-code text-3xl font-bold text-emerald-500 leading-none">{cred.metric}</span>
                       <span className={`font-mono-code text-[9px] mt-1 ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>/ 1000</span>
-                    </div>
+                    </motion.div>
 
                     {/* Verify CTA */}
-                    <a
+                    <motion.a
                       href={cred.url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-mono-code text-xs font-bold transition-colors shadow-sm whitespace-nowrap"
                     >
                       <ShieldCheck className="w-3.5 h-3.5 stroke-[2.5]" />
                       <span>Verify Credential</span>
                       <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                    </a>
+                    </motion.a>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
 
-          {/* ── SECONDARY GRID: 2-column uniform cards ── */}
+          {/* SECONDARY GRID: 2-column uniform cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {CREDENTIALS.filter(c => !c.isFeatured).map((cred) => {
+            {CREDENTIALS.filter(c => !c.isFeatured).map((cred, idx) => {
               const IconComponent = cred.icon;
               return (
-                <div
+                <motion.div
                   key={cred.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ ...SPRING_CONFIG.default, delay: idx * 0.05 }}
+                  whileHover={{ 
+                    y: -4,
+                    borderColor: isDark ? '#27272A' : '#e2e8f0'
+                  }}
+                  viewport={{ once: true }}
                   className={`group rounded-2xl border p-5 flex flex-col justify-between transition-all duration-200 ${
                     isDark
                       ? 'bg-[#121215] border-[#222226] hover:border-zinc-700 hover:bg-[#16161a]'
@@ -1155,9 +1573,12 @@ export default function App() {
                     {/* Header row: Icon + Issuer + Metric */}
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2.5">
-                        <div className={`p-2 rounded-lg border transition-colors ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400 group-hover:text-emerald-400 group-hover:border-emerald-500/30' : 'bg-zinc-100 border-zinc-200 text-zinc-600 group-hover:text-emerald-600'}`}>
+                        <motion.div 
+                          whileHover={{ scale: 1.1 }}
+                          className={`p-2 rounded-lg border transition-colors ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400 group-hover:text-emerald-400 group-hover:border-emerald-500/30' : 'bg-zinc-100 border-zinc-200 text-zinc-600 group-hover:text-emerald-600'}`}
+                        >
                           <IconComponent className="w-4 h-4 stroke-[1.8]" />
-                        </div>
+                        </motion.div>
                         <div>
                           <p className="font-mono-code text-[10px] text-zinc-500 uppercase tracking-wider">{cred.issuerShort}</p>
                           <p className="font-mono-code text-[9px] text-emerald-500">{cred.verifyVia}</p>
@@ -1181,7 +1602,7 @@ export default function App() {
 
                     {/* Tags */}
                     <div className="flex flex-wrap gap-1 mb-3">
-                      {cred.tags.map(tag => (
+                      {cred.tags.map((tag) => (
                         <span key={tag} className={`px-2 py-0.5 rounded font-mono-code text-[9px] border ${isDark ? 'bg-zinc-900/50 border-zinc-800 text-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-500'}`}>
                           {tag}
                         </span>
@@ -1199,10 +1620,12 @@ export default function App() {
 
                   {/* Verify Button */}
                   <div className={`mt-4 pt-3 border-t ${isDark ? 'border-zinc-800/60' : 'border-zinc-100'}`}>
-                    <a
+                    <motion.a
                       href={cred.url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       className={`w-full py-2 px-3 rounded-lg font-mono-code text-xs font-semibold flex items-center justify-between transition-all duration-150 ${
                         isDark
                           ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 hover:border-zinc-700'
@@ -1214,18 +1637,25 @@ export default function App() {
                         <span>Verify Credential</span>
                       </span>
                       <ArrowUpRight className="w-3 h-3 stroke-[2] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                    </a>
+                    </motion.a>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
-        </section>
+        </motion.section>
 
         {/* ==========================================
-            5. TECHNICAL STACK (3-COLUMN CLEAN GRID)
+            5. TECHNICAL STACK (3-COLUMN GRID)
         ========================================== */}
-        <section id="stack" className="py-16 sm:py-24 border-b border-zinc-800/40 scroll-mt-16">
+        <motion.section 
+          id="stack" 
+          className="py-16 sm:py-24 scroll-mt-16"
+          initial="hidden"
+          whileInView="visible"
+          variants={SCROLL_REVEAL_VARIANTS}
+          viewport={{ once: true, margin: '-80px' }}
+        >
           <div className="mb-10">
             <h2 className="text-2xl font-bold tracking-tight mb-1">Technical Stack</h2>
             <p className={`text-sm ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
@@ -1234,19 +1664,28 @@ export default function App() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {TECH_STACK.map((group) => {
+            {TECH_STACK.map((group, idx) => {
               const IconComponent = group.icon;
               return (
-                <div
+                <motion.div
                   key={group.category}
-                  className={`p-6 rounded-2xl border flex flex-col justify-between ${
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ ...SPRING_CONFIG.default, delay: idx * 0.1 }}
+                  whileHover={{ 
+                    y: -4,
+                    borderColor: isDark ? '#27272A' : '#e2e8f0'
+                  }}
+                  viewport={{ once: true }}
+                  className={`p-6 rounded-2xl border flex flex-col justify-between transition-all ${
                     isDark ? 'bg-[#121215] border-[#222226]' : 'bg-white border-zinc-200 shadow-2xs'
                   }`}
                 >
                   <div>
                     {/* Header */}
                     <div className="flex items-center space-x-2.5 mb-3">
-                      <div
+                      <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
                         className={`p-2 rounded-lg border ${
                           isDark
                             ? 'bg-zinc-900 border-zinc-800 text-emerald-400'
@@ -1254,7 +1693,7 @@ export default function App() {
                         }`}
                       >
                         <IconComponent className="w-4 h-4 stroke-[1.5]" />
-                      </div>
+                      </motion.div>
                       <h3 className="font-semibold text-sm tracking-tight">{group.category}</h3>
                     </div>
 
@@ -1265,247 +1704,97 @@ export default function App() {
 
                   {/* Monospace Technology Pills */}
                   <div className="flex flex-wrap gap-2 pt-2 border-t border-zinc-800/40">
-                    {group.skills.map((skill) => (
-                      <span
+                    {group.skills.map((skill, skillIdx) => (
+                      <motion.span
                         key={skill}
-                        className={`px-2.5 py-1 rounded-md font-mono-code text-xs border transition-colors ${
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: skillIdx * 0.03 }}
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        viewport={{ once: true }}
+                        className={`px-2.5 py-1 rounded-md font-mono-code text-xs border transition-colors cursor-default ${
                           isDark
                             ? 'bg-zinc-900/80 border-zinc-800 text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-300'
                             : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:border-emerald-500/40 hover:text-emerald-700'
                         }`}
                       >
                         {skill}
-                      </span>
+                      </motion.span>
                     ))}
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
-        </section>
+        </motion.section>
 
         {/* ==========================================
-            6. MINIMALIST FOOTER
+            FOOTER
         ========================================== */}
-        <footer className="py-16">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <motion.footer
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={SPRING_CONFIG.gentle}
+          viewport={{ once: true }}
+          className={`py-12 border-t ${isDark ? 'border-zinc-800/40 text-zinc-400' : 'border-zinc-200 text-zinc-600'}`}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-sm">
             <div>
-              <h2 className="text-lg font-semibold tracking-tight mb-2">
-                Let’s build reliable AI systems together.
-              </h2>
-              <div className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-mono-code ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
-                <a
-                  href="mailto:rizky80firmansyah@gmail.com"
-                  className="hover:text-emerald-400 transition-colors"
+              <p className={`font-mono-code text-xs uppercase tracking-widest mb-2 ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                Location
+              </p>
+              <p>Bekasi, Indonesia</p>
+            </div>
+            <div>
+              <p className={`font-mono-code text-xs uppercase tracking-widest mb-2 ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                Contact
+              </p>
+              <p>+62 813-8048-2452</p>
+              <p className="break-all">rizky80firmansyah@gmail.com</p>
+            </div>
+            <div>
+              <p className={`font-mono-code text-xs uppercase tracking-widest mb-2 ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                Social
+              </p>
+              <div className="flex gap-3">
+                <motion.a
+                  href="https://github.com/RizkyFirmansyah122"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ scale: 1.1 }}
+                  transition={SPRING_CONFIG.gentle}
+                  className="hover:text-emerald-500 transition-colors"
                 >
-                  rizky80firmansyah@gmail.com
-                </a>
-                <span>•</span>
-                <a
+                  GitHub
+                </motion.a>
+                <motion.a
+                  href="http://www.linkedin.com/in/rizky-firmansyah-sipahutar-a9a9b6287"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ scale: 1.1 }}
+                  transition={SPRING_CONFIG.gentle}
+                  className="hover:text-emerald-500 transition-colors"
+                >
+                  LinkedIn
+                </motion.a>
+                <motion.a
                   href="http://wa.me/6281380482452"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-emerald-400 transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  transition={SPRING_CONFIG.gentle}
+                  className="hover:text-emerald-500 transition-colors"
                 >
-                  +62 813-8048-2452 (WhatsApp)
-                </a>
-                <span>•</span>
-                <span>Bekasi, Indonesia</span>
+                  WhatsApp
+                </motion.a>
               </div>
             </div>
-
-            {/* Direct Connect Buttons */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              {/* WhatsApp Button */}
-              <a
-                href="http://wa.me/6281380482452"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-medium text-xs flex items-center space-x-1.5 transition-colors shrink-0 shadow-xs"
-              >
-                <MessageSquare className="w-3.5 h-3.5 stroke-[2]" />
-                <span>WhatsApp</span>
-              </a>
-
-              {/* LinkedIn Button */}
-              <a
-                href="http://www.linkedin.com/in/rizky-firmansyah-sipahutar-a9a9b6287"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center space-x-1.5 transition-colors ${
-                  isDark
-                    ? 'bg-[#121215] border-[#222226] text-zinc-300 hover:text-white hover:border-zinc-700'
-                    : 'bg-white border-zinc-200 text-zinc-700 hover:text-black hover:border-zinc-300'
-                }`}
-              >
-                <span>LinkedIn</span>
-                <ArrowUpRight className="w-3.5 h-3.5 stroke-[1.5]" />
-              </a>
-
-              {/* GitHub Button */}
-              <a
-                href="https://github.com/RizkyFirmansyah122"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center space-x-1.5 transition-colors ${
-                  isDark
-                    ? 'bg-[#121215] border-[#222226] text-zinc-300 hover:text-white hover:border-zinc-700'
-                    : 'bg-white border-zinc-200 text-zinc-700 hover:text-black hover:border-zinc-300'
-                }`}
-              >
-                <span>GitHub</span>
-                <ArrowUpRight className="w-3.5 h-3.5 stroke-[1.5]" />
-              </a>
-
-              {/* Download CV Button */}
-              <a
-                href="/Rizky_Firmansyah_CV.pdf"
-                download="Rizky_Firmansyah_CV.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center space-x-1.5 transition-colors ${
-                  isDark
-                    ? 'bg-[#121215] border-[#222226] text-zinc-300 hover:text-white hover:border-zinc-700'
-                    : 'bg-white border-zinc-200 text-zinc-700 hover:text-black hover:border-zinc-300'
-                }`}
-              >
-                <Download className="w-3.5 h-3.5 stroke-[1.5]" />
-                <span>Download CV</span>
-              </a>
-
-              {/* Copy Email Button */}
-              <button
-                onClick={copyEmail}
-                className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center space-x-1.5 transition-colors ${
-                  isDark
-                    ? 'bg-[#121215] border-[#222226] text-zinc-300 hover:text-white hover:border-zinc-700'
-                    : 'bg-white border-zinc-200 text-zinc-700 hover:text-black hover:border-zinc-300'
-                }`}
-              >
-                {copiedEmail ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 stroke-[2] text-emerald-500" />
-                    <span className="text-emerald-500 font-medium">Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Mail className="w-3.5 h-3.5 stroke-[1.5] text-zinc-400" />
-                    <span>Copy Email</span>
-                  </>
-                )}
-              </button>
-            </div>
           </div>
-
-          <div className={`mt-12 pt-6 border-t text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${isDark ? 'border-zinc-900 text-zinc-500' : 'border-zinc-200 text-zinc-500'}`}>
-            <span>© {new Date().getFullYear()} Rizky Firmansyah Sipahutar.</span>
-            <span className="font-mono-code">B.Sc. Computer Science — YARSI University</span>
+          <div className={`mt-8 pt-8 border-t ${isDark ? 'border-zinc-800/40' : 'border-zinc-200'} text-xs text-center ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>
+            <p>© 2025 Rizky Firmansyah Sipahutar. All rights reserved.</p>
           </div>
-        </footer>
+        </motion.footer>
       </main>
-
-      {/* ==========================================
-          CLEAN PRINTABLE RESUME MODAL
-      ========================================== */}
-      {isCvOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
-          <div
-            className={`w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border p-6 sm:p-8 ${
-              isDark ? 'bg-[#121215] border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-            }`}
-          >
-            <div className="flex items-center justify-between pb-4 mb-6 border-b border-zinc-800/60">
-              <div>
-                <h3 className="text-lg font-bold">Rizky Firmansyah Sipahutar</h3>
-                <p className="text-xs text-zinc-400 font-mono-code">
-                  AI & Computer Vision Engineer · GPA 3.77/4.00
-                </p>
-                <div className="flex flex-wrap gap-2 text-xs font-mono-code text-zinc-500 mt-1">
-                  <span>rizky80firmansyah@gmail.com</span>
-                  <span>•</span>
-                  <span>+62 813-8048-2452</span>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <a
-                  href="/Rizky_Firmansyah_CV.pdf"
-                  download="Rizky_Firmansyah_CV.pdf"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-medium text-xs flex items-center space-x-1.5 transition-colors shadow-xs"
-                >
-                  <Download className="w-3.5 h-3.5 stroke-[2]" />
-                  <span>Download PDF</span>
-                </a>
-                <button
-                  onClick={() => window.print()}
-                  className={`px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center space-x-1.5 transition-colors ${
-                    isDark
-                      ? 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white'
-                      : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:text-black'
-                  }`}
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Print</span>
-                </button>
-                <button
-                  onClick={() => setIsCvOpen(false)}
-                  className="p-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-6 text-xs sm:text-sm leading-relaxed">
-              <div>
-                <div className="font-mono-code text-xs text-emerald-500 uppercase mb-1">Summary</div>
-                <p className={isDark ? 'text-zinc-300' : 'text-zinc-700'}>
-                  Computer Science graduate from YARSI University (GPA 3.77/4.00) specializing in Artificial Intelligence, Deep Learning, and Computer Vision. Experienced in taking AI architectures from dataset curation to production deployment using Python and SQL.
-                </p>
-              </div>
-
-              <div>
-                <div className="font-mono-code text-xs text-emerald-500 uppercase mb-2">Verified Credentials</div>
-                <div className="space-y-2.5">
-                  {CREDENTIALS.map((c) => (
-                    <div key={c.id} className="flex justify-between items-baseline text-xs border-b border-zinc-800/40 pb-1.5">
-                      <a
-                        href={c.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium hover:text-emerald-400 transition-colors flex items-center space-x-1"
-                      >
-                        <span>{c.title}</span>
-                        <ArrowUpRight className="w-3 h-3 text-zinc-500 inline" />
-                      </a>
-                      <span className="font-mono-code text-zinc-400 ml-2 shrink-0">{c.metric}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <div className="font-mono-code text-xs text-emerald-500 uppercase mb-2">Experience</div>
-                <div className="space-y-3">
-                  {EXPERIENCE.map((e, i) => (
-                    <div key={i}>
-                      <div className="font-semibold">
-                        {e.role} — <span className="font-normal text-zinc-400">{e.org} ({e.period})</span>
-                      </div>
-                      <ul className="list-disc pl-5 mt-1 space-y-1 text-zinc-400 text-xs">
-                        {e.points.map((p, idx) => (
-                          <li key={idx}>{p}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
